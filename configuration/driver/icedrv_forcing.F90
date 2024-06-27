@@ -615,11 +615,13 @@
       read (nu_forcing, *) string1 ! headers
       read (nu_forcing, *) string1 ! units
 
+      do nt = 1, ntime*(fyear - fyear_init)
+         read (nu_forcing, '(6(f10.5,1x),3(f10.8,1x))')
+      enddo
+
       do nt = 1, ntime
-         !write(nu_diag,*) nt
          read (nu_forcing, '(6(f10.5,1x),3(f10.8,1x))') &
          z, dswsfc, dlwsfc, windu10, windv10, temp2m, spechum, precipr,precips
-         !print*,nt,z, dswsfc, dlwsfc, windu10, windv10, temp2m, spechum, precipr,precips
          
            flw_data(nt) = dlwsfc
            fsw_data(nt) = dswsfc
