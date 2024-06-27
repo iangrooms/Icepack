@@ -74,7 +74,7 @@
          atm_data_format, & ! 'bin'=binary or 'nc'=netcdf
          ocn_data_format, & ! 'bin'=binary or 'nc'=netcdf
          bgc_data_format, & ! 'bin'=binary or 'nc'=netcdf
-         atm_data_type,   & ! 'default', 'clim', 'CFS'
+         atm_data_type,   & ! 'default', 'clim', 'CFS', 'CAM6'
          ocn_data_type,   & ! 'default', 'SHEBA'
          bgc_data_type,   & ! 'default', 'ISPOL', 'NICE'
          lateral_flux_type,   & ! 'uniform_ice', 'open_water'
@@ -161,6 +161,7 @@
       if (trim(atm_data_type(1:4)) == 'clim')  call atm_climatological
       if (trim(atm_data_type(1:5)) == 'ISPOL') call atm_ISPOL
       if (trim(atm_data_type(1:4)) == 'NICE')  call atm_NICE
+      if (trim(atm_data_type(1:4)) == 'CAM6')  call atm_CAM6
       if (trim(ocn_data_type(1:5)) == 'SHEBA') call ice_open_clos
 
       if (restore_ocn) then
@@ -227,7 +228,7 @@
 
       character(len=*), parameter :: subname='(get_forcing)'
 
-      if (trim(atm_data_type) == 'CFS') then
+      if (trim(atm_data_type) == 'CFS' .or. trim(atm_data_type) == 'CAM6') then
          ! calculate data index corresponding to current timestep
          i = mod(timestep-1,ntime)+1 ! repeat forcing cycle
          mlast = i
@@ -586,6 +587,58 @@
 
 !=======================================================================
 
+      subroutine atm_CAM6
+
+      integer (kind=int_kind) :: &
+         nt             ! loop index
+
+      real (kind=dbl_kind) :: &
+         dlwsfc,  &     ! downwelling longwave (W/m2)
+         dswsfc,  &     ! downwelling shortwave (W/m2)
+         windu10, &     ! wind components (m/s)
+         windv10, &     !
+         temp2m,  &     ! 2m air temperature (K)
+         spechum ,&     ! specific humidity (kg/kg)
+         precipr ,&     ! Rain precipitation (kg/m2/s)
+         precips ,&     ! Snow precipitation (kg/m2/s)
+         z              ! Height (m)
+
+      character (char_len_long) string1
+      character (char_len_long) filename
+      character(len=*), parameter :: subname='(atm_CAM6)'
+
+      filename = trim(data_dir)//'/CAM6/'//trim(atm_data_file)
+
+      write (nu_diag,*) 'Reading ',filename
+
+      open (nu_forcing, file=filename, form='formatted')
+      read (nu_forcing, *) string1 ! headers
+      read (nu_forcing, *) string1 ! units
+
+      do nt = 1, ntime
+         !write(nu_diag,*) nt
+         read (nu_forcing, '(6(f10.5,1x),3(f10.8,1x))') &
+         z, dswsfc, dlwsfc, windu10, windv10, temp2m, spechum, precipr,precips
+         !print*,nt,z, dswsfc, dlwsfc, windu10, windv10, temp2m, spechum, precipr,precips
+         
+           flw_data(nt) = dlwsfc
+           fsw_data(nt) = dswsfc
+          uatm_data(nt) = windu10
+          vatm_data(nt) = windv10
+          Tair_data(nt) = temp2m
+          potT_data(nt) = temp2m
+            Qa_data(nt) = spechum
+         fsnow_data(nt) = precips
+         frain_data(nt) = precipr
+         zlvl_data(nt) = z
+      enddo
+
+      close (nu_forcing)
+
+      end subroutine atm_CAM6
+      
+      !=======================================================================
+
       subroutine prepare_forcing (Tair,     fsw,      &
                                   cldf,     &
                                   frain,    fsnow,    &
@@ -705,7 +758,9 @@
       ! Compute other fields needed by model
       !-----------------------------------------------------------------
 
-         zlvl(nt) = zlvl0
+         if (trim(atm_data_type) /= 'CAM6') then
+           zlvl(nt) = zlvl0
+         endif
          potT(nt) = Tair(nt)
 
          ! divide shortwave into spectral bands
@@ -720,13 +775,13 @@
          ! determine whether precip is rain or snow
          ! HadGEM forcing provides separate snowfall and rainfall rather
          ! than total precipitation
-!         if (trim(atm_data_type) /= 'hadgem') then
+         if (trim(atm_data_type) /= 'CAM6') then
             frain(nt) = c0
             if (Tair(nt) >= Tffresh) then
                 frain(nt) = fsnow(nt)
                 fsnow(nt) = c0
             endif
-!         endif
+         endif
 
          if (calc_strair) then
             wind (nt) = sqrt(uatm(nt)**2 + vatm(nt)**2)
