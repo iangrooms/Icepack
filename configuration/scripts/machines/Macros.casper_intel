@@ -1,25 +1,26 @@
 #==============================================================================
-# Makefile macros for NCAR derecho, cray compiler
+# Makefile macros for NCAR derecho, intel compiler
 #==============================================================================
 
-CPP        := ftn -e P
-CPPDEFS    := -DFORTRANUNDERSCORE -DNO_R16 ${ICE_CPPDEFS}
-CFLAGS     := -c -O2
+CPP        := fpp
+CPPDEFS    := -DFORTRANUNDERSCORE ${ICE_CPPDEFS}
+CFLAGS     := -c -O2 -fp-model precise -march=core-avx2
 
-FIXEDFLAGS := -132
-FREEFLAGS  := 
-FFLAGS     := -hbyteswapio
+FIXEDFLAGS := -fixed -132
+FREEFLAGS  := -free
+FFLAGS     := -fp-model precise -convert big_endian -assume byterecl -ftz -traceback -march=core-avx2
 FFLAGS_NOOPT:= -O0
 
 ifeq ($(ICE_BLDDEBUG), true)
-  FFLAGS     += -O0 -hfp0 -g -Rbcdps -Ktrap=fp
+  FFLAGS     += -O0 -g -check uninit -check bounds -check pointers -fpe0 -check noarg_temp_created -link_mpi=dbg
+#  FFLAGS     += -O0 -g -check all -fpe0 -ftrapuv -fp-model except -check noarg_temp_created -link_mpi=dbg -stand f08
+#  FFLAGS     += -O0 -g -check all -fpe0 -ftrapuv -fp-model except -check noarg_temp_created -init=snan,arrays -link_mpi=dbg
 else
-  # -Rp is needed to work around SAME_TBS compiler bug in cce/16, cce/17
-  FFLAGS     += -O2 -hfp0 -Rp # -eo
+  FFLAGS     += -O2
 endif
 
-SCC   := cc
-SFC   := ftn
+SCC   := icx
+SFC   := ifort
 CC := $(SCC)
 FC := $(SFC)
 LD := $(FC)

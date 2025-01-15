@@ -1,25 +1,24 @@
 #==============================================================================
-# Makefile macros for NCAR derecho, cray compiler
+# Makefile macros for NCAR derecho, gnu compiler
 #==============================================================================
 
-CPP        := ftn -e P
-CPPDEFS    := -DFORTRANUNDERSCORE -DNO_R16 ${ICE_CPPDEFS}
-CFLAGS     := -c -O2
+CPP        := ftn -E
+CPPDEFS    := -DFORTRANUNDERSCORE ${ICE_CPPDEFS}
+CFLAGS     := -c
 
-FIXEDFLAGS := -132
-FREEFLAGS  := 
-FFLAGS     := -hbyteswapio
+FIXEDFLAGS := -ffixed-line-length-132
+FREEFLAGS  := -ffree-form
+FFLAGS     := -fconvert=big-endian -fbacktrace -ffree-line-length-none -fallow-argument-mismatch
 FFLAGS_NOOPT:= -O0
 
 ifeq ($(ICE_BLDDEBUG), true)
-  FFLAGS     += -O0 -hfp0 -g -Rbcdps -Ktrap=fp
-else
-  # -Rp is needed to work around SAME_TBS compiler bug in cce/16, cce/17
-  FFLAGS     += -O2 -hfp0 -Rp # -eo
+  FFLAGS   += -O0 -g -fcheck=bounds -finit-real=nan -fimplicit-none -ffpe-trap=invalid,zero,overflow --std f2008
+#  FFLAGS   += -O0 -g -fcheck=all -finit-real=snan -fimplicit-none -ffpe-trap=invalid,zero,overflow
+  CFLAGS   += -O0
 endif
 
-SCC   := cc
-SFC   := ftn
+SCC   := gcc
+SFC   := gfortran
 CC := $(SCC)
 FC := $(SFC)
 LD := $(FC)
