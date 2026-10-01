@@ -1079,6 +1079,7 @@
 
       real (kind=dbl_kind), parameter :: &
          Gregorian_year = 365.2425, &  ! days in Gregorian year per cf standard
+         noleap_year    = 365.0,    &  ! days in a noleap year
          model_miss_val = -9999.00     ! missing value for internal use
 
       character(len=*), parameter :: subname='(atm_MDF)'
@@ -1098,9 +1099,13 @@
                            file=__FILE__,line=__LINE__)
 
          ! Create array for the time step values in seconds since 1970
-         ! CF standard calendar is Gregorian
-         ! May have strange behavior if dt is not an integer
-         model_time0 = (year_init - 1970) * Gregorian_year * 24 * 3600 + time0
+         ! using the calendar selected by use_leap_years.
+         ! May have strange behavior if dt is not an integer.
+         if (use_leap_years) then
+            model_time0 = (year_init - 1970) * Gregorian_year * 24 * 3600 + time0
+         else
+            model_time0 = (year_init - 1970) * noleap_year * 24 * 3600 + time0
+         endif
          do nt = 1, ntime
             model_time(nt) = int(model_time0 + dt * nt, kind=dbl_kind)
          enddo
@@ -1361,11 +1366,19 @@
       if (status /= nf90_noerr) call icedrv_system_abort(&
          string=subname//'Couldnt get calendar attribute', &
                         file=__FILE__,line=__LINE__)
-      ! In future this check could be replaced with calendar matching
-      if (calendar_type /= "standard" .or. .not. use_leap_years) then
-         call icedrv_system_abort(&
-         string=subname//'Forcing calendar not standard or not using leap years',&
-         file=__FILE__,line=__LINE__)
+      ! Check that forcing and model calendars are compatible.
+      if (use_leap_years) then
+         if (trim(calendar_type) /= "standard") then
+            call icedrv_system_abort(&
+               string=subname//'Forcing calendar incompatible with leap-year model calendar', &
+               file=__FILE__,line=__LINE__)
+         endif
+      else
+         if (trim(calendar_type) /= "noleap") then
+            call icedrv_system_abort(&
+               string=subname//'Forcing calendar incompatible with noleap model calendar', &
+               file=__FILE__,line=__LINE__)
+         endif
       endif
       ! Get the time array
       !! Note, in the file the value is actually unsigned, need to make sure this
@@ -1579,6 +1592,7 @@
 
       real (kind=dbl_kind), parameter :: &
          Gregorian_year = 365.2425, &  ! days in Gregorian year per cf standard
+         noleap_year    = 365.0,    &  ! days in a noleap year
          model_miss_val = -9999.00, &  ! missing value for internal use
          leg4_end_time  = 1596034800, &! end of leg 4 in seconds since 1970
          leg5_start_time= 1598451600   ! start of leg 5 in seconds since 1970
@@ -1600,9 +1614,13 @@
                            file=__FILE__,line=__LINE__)
 
          ! Create array for the time step values in seconds since 1970
-         ! CF standard calendar is Gregorian
-         ! May have strange behavior if dt is not an integer
-         model_time0 = (year_init - 1970) * Gregorian_year * 24 * 3600 + time0
+         ! using the calendar selected by use_leap_years.
+         ! May have strange behavior if dt is not an integer.
+         if (use_leap_years) then
+            model_time0 = (year_init - 1970) * Gregorian_year * 24 * 3600 + time0
+         else
+            model_time0 = (year_init - 1970) * noleap_year * 24 * 3600 + time0
+         endif
          do nt = 1, ntime
             model_time(nt) = int(model_time0 + dt * nt, kind=dbl_kind)
          enddo
