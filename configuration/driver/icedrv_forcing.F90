@@ -284,6 +284,7 @@
 
          ! Ocean forcing
          sst_temp(:) = sst_data(timestep)
+         hmix    (:) = hmix_data(timestep)
          sss     (:) = sss_data(timestep)
          uocn    (:) = uocn_data(timestep)
          vocn    (:) = vocn_data(timestep)
